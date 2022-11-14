@@ -1,0 +1,233 @@
+body {
+    background-color: black;
+    color: white;
+
+    font-family: Consolas;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.App {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#loginDialog {
+    width: 500px;
+
+    padding: 30px;
+    border: solid 2px white;
+
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    flex-wrap: wrap;
+
+    gap: 10px;
+}
+
+.welcome {
+    font-size: 30px;
+    font-weight: 700;
+
+    padding: 20px;
+}
+
+#loginDialog input {
+    width: 100%;
+    height: 50px;
+
+    padding: 10px;
+
+    background: black;
+    border: solid 2px white;
+
+    font-size: 18px;
+    font-family: Consolas;
+    color: white;
+}
+
+#loginDialog input:focus {
+    outline: solid 1px white;
+}
+
+#loginButton {
+    width: 100%;
+
+    padding: 20px;
+
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+
+    border: solid 2px white;
+
+    user-select: none;
+}
+
+#warning {
+    width: 100%;
+    padding: 20px;
+
+    background: rgb(255, 0, 0);
+
+    font-weight: 700;
+    text-align: center;
+
+    user-select: none;
+}
+
+#loginButton:hover {
+    color: black;
+    background-color: white;
+}
+
+#usersList {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 20%;
+    height: 100%;
+    padding: 5px;
+
+    background-color: black;
+    border: solid 3px white;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+
+    gap: 10px;
+
+    overflow: auto;
+}
+
+#usersList .user {
+    width: 100%;
+    padding: 20px;
+
+    border: solid 3px white;
+    user-select: none;
+
+    font-size: 18px;
+}
+#usersList .user.selected {
+    background-color: white;
+    color: black;
+
+    font-weight: 700;
+}
+
+#chat {
+    position: absolute;
+    top: 0;
+    right: 0;
+
+    width: calc(80% + 3px);
+    height: calc(100% - 70px);
+    padding: 20px;
+
+    background-color: black;
+    border: solid 3px white;
+
+    display: flex;
+    align-content: flex-start;
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+    gap: 5px;
+
+    overflow: auto;
+}
+
+.introduction {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+
+    padding: 20px;
+
+    font-weight: 700;
+    font-size: 30px;
+}
+
+.introduction span {
+    font-weight: 500;
+    font-size: 20px;
+}
+
+.marginTemp {
+    width: 100%;
+    height: 100%;
+}
+
+.messageContainer {
+    margin-top: auto;
+    width: 100%;
+    display: flex;
+}
+
+.message {
+    width: auto;
+    padding: 20px;
+
+    background-color: black;
+    border: solid 3px white;
+}
+
+.message.user {
+    margin-left: auto;
+}
+
+.message.other {
+    margin-right: auto;
+}
+
+#inputSection {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+
+    width: calc(80% + 3px);
+    height: calc(73px);
+    padding: 20px;
+
+    background-color: black;
+    border: solid 3px white;
+
+    font-family: Consolas;
+    font-size: 20px;
+    color: white;
+}
+
+#inputSection:focus {
+    outline: none;
+}
+
+::-webkit-scrollbar {
+    width: 20px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: white;
+    border: solid 5px black;
+    border-left-width: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
