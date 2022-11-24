@@ -197,14 +197,11 @@ body {
     position: absolute;
     bottom: 0;
     right: 0;
-
     width: calc(80% + 3px);
     height: calc(73px);
     padding: 20px;
-
     background-color: black;
     border: solid 3px white;
-
     font-family: Consolas;
     font-size: 20px;
     color: white;

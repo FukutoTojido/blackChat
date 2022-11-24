@@ -81,6 +81,7 @@ app.get("/", (req, res) => {
         if ([80, 8080, 443, 24050, 20727].includes(PORT)) PORT *= 2;
 
         let username = "";
+        const nodeIds = [];
 
         console.log("Socket started at " + sPORT);
 
@@ -92,11 +93,35 @@ app.get("/", (req, res) => {
             node.direct(nodeId, { name: username, text: "//WAY" });
         });
         node.on("disconnect", ({ nodeId }) => {
-            console.log("Node", nodeId, "has disconnected");
+            if (nodeId !== undefined) {
+                console.log("Node", nodeId, "has disconnected");
+                const disconnectedName = nodeIds.filter((n) => n.nodeId === nodeId)[0].name;
+
+                nodeIds.forEach((n, idx) => {
+                    if (n.nodeId === nodeId) nodeIds.splice(idx, 1);
+                });
+
+                // console.log(nodeIds);
+                ws.send(
+                    JSON.stringify({
+                        type: "disconnection",
+                        connectionBroke: disconnectedName,
+                    }),
+                );
+            }
         });
         node.on("direct", ({ origin, message }) => {
             console.log("Message", message, "has been directly send to us from", origin);
-            ws.send(JSON.stringify({ connectionAdded: message.name }));
+
+            if (message.text === "//WAY") {
+                if (nodeIds.filter((n) => n.nodeId === origin).length === 0) {
+                    console.log(nodeIds);
+                    ws.send(JSON.stringify({ type: "connection", connectionAdded: message.name }));
+                    nodeIds.push({ name: message.name, nodeId: origin });
+                }
+            } else {
+                ws.send(JSON.stringify({ type: "mes", ...message }));
+            }
         });
 
         ws.on("message", async (event) => {
@@ -106,20 +131,31 @@ app.get("/", (req, res) => {
             if (Object.keys(data).includes("uname") && Object.keys(data).includes("pwd")) {
                 const authInfo = await authenicate(data.uname, data.pwd, PORT);
                 if (authInfo.auth !== 0) username = data.uname;
-                ws.send(JSON.stringify(authInfo));
+                ws.send(JSON.stringify({ type: "auth", ...authInfo }));
             }
 
             if (Object.keys(data).includes("demandDestination")) {
-                const userAddress = await getUserAddress(data.demandDestination, username);
-                console.log(userAddress);
+                if (data.demandDestination !== "=== HOME ===") {
+                    const userAddress = await getUserAddress(data.demandDestination, username);
+                    console.log(userAddress);
 
-                if (userAddress.status === "online") {
-                    node.connect(userAddress.ipAddress, userAddress.port, () => {
-                        console.log(`Connected to ${userAddress.ipAddress}:${userAddress.port}`);
-                    });
+                    if (userAddress.status === "online") {
+                        node.connect(userAddress.ipAddress, userAddress.port, () => {
+                            console.log(`Connected to ${userAddress.ipAddress}:${userAddress.port}`);
+                        });
+                    } else {
+                        ws.send(JSON.stringify({ type: "notAvailable", connectionBroke: data.demandDestination }));
+                    }
+
+                    ws.send(
+                        JSON.stringify({
+                            type: "chatLoad",
+                            username: userAddress.username,
+                            status: userAddress.status,
+                            userChatlog: userAddress.chatLog,
+                        }),
+                    );
                 }
-
-                ws.send(JSON.stringify({ username: userAddress.username, userChatlog: userAddress.chatLog }));
             }
 
             if (
@@ -127,7 +163,56 @@ app.get("/", (req, res) => {
                 Object.keys(data).includes("message") &&
                 Object.keys(data).includes("image")
             ) {
-                saveMessage(data, username);
+                // console.log(nodeIds.filter((n) => n.name === data.destination)[0].nodeId);
+                if (data.message.charAt(0) !== "/") {
+                    if (data.destination !== "=== HOME ===") {
+                        node.direct(nodeIds.filter((n) => n.name === data.destination)[0].nodeId, {
+                            name: username,
+                            text: data.message,
+                        });
+                        saveMessage(data, username);
+                    }
+                } else {
+                    const command = data.message.split(" ")[0].slice(1);
+                    switch (command) {
+                        case "query": {
+                            const name = data.message.split(" ")[1];
+                            const userAddress = await getUserAddress(name, username);
+                            console.log(userAddress);
+
+                            if (Object.keys(userAddress).includes("err")) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: "err",
+                                        mes: "user not found",
+                                    }),
+                                );
+                                break;
+                            }
+
+                            if (userAddress.status === "offline") {
+                                ws.send(JSON.stringify({ type: "notAvailable", connectionBroke: name }));
+                            } else {
+                                node.connect(userAddress.ipAddress, userAddress.port, () => {
+                                    console.log(`Connected to ${userAddress.ipAddress}:${userAddress.port}`);
+                                });
+                            }
+
+                            ws.send(
+                                JSON.stringify({
+                                    type: "chatLoad",
+                                    username: userAddress.username,
+                                    status: userAddress.status,
+                                    userChatlog: userAddress.chatLog,
+                                }),
+                            );
+                            break;
+                        }
+                        default: {
+                            break;
+                        }
+                    }
+                }
             }
         });
 
@@ -147,7 +232,7 @@ app.get("/", (req, res) => {
     });
 });
 
-app.listen(7270, async () => {
+app.listen(7270, "0.0.0.0", async () => {
     const interfaces = os.networkInterfaces();
     for (const k in interfaces) {
         for (const k2 in interfaces[k]) {
