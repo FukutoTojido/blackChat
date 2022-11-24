@@ -71,9 +71,14 @@ socket.onmessage = (event) => {
     }
 
     if (data.type === "mes") {
-        const mes = createMessage(data.text, false);
-        chat.appendChild(mes);
-        chat.scrollTop = chat.scrollHeight;
+        const selected = document.querySelector(".user.selected");
+        const selectedUser = selected.innerHTML;
+
+        if (data.name === selectedUser) {
+            const mes = createMessage(data.text, false);
+            chat.appendChild(mes);
+            chat.scrollTop = chat.scrollHeight;
+        }
     }
 
     if (data.type === "connection") {
