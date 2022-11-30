@@ -183,6 +183,17 @@ body {
 
     background-color: black;
     border: solid 3px white;
+
+    display: flex;
+    gap: 10px;
+}
+
+.message a {
+    width: 20px;
+    height: 20px;
+
+    background-image: url('https://img.icons8.com/ios-glyphs/90/FFFFFF/downloads.png');
+    background-size: cover;
 }
 
 .message.user {

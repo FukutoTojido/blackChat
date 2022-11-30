@@ -126,15 +126,15 @@ app.get("/", (req, res) => {
 
         ws.on("message", async (event) => {
             const data = JSON.parse(event.toString());
-            console.log(data);
+            // console.log(data);
 
-            if (Object.keys(data).includes("uname") && Object.keys(data).includes("pwd")) {
+            if (data.type === "auth") {
                 const authInfo = await authenicate(data.uname, data.pwd, PORT);
                 if (authInfo.auth !== 0) username = data.uname;
                 ws.send(JSON.stringify({ type: "auth", ...authInfo }));
             }
 
-            if (Object.keys(data).includes("demandDestination")) {
+            if (data.type === "openConnection") {
                 if (data.demandDestination !== "=== HOME ===") {
                     const userAddress = await getUserAddress(data.demandDestination, username);
                     console.log(userAddress);
@@ -158,11 +158,27 @@ app.get("/", (req, res) => {
                 }
             }
 
-            if (
-                Object.keys(data).includes("destination") &&
-                Object.keys(data).includes("message") &&
-                Object.keys(data).includes("image")
-            ) {
+            if (data.type === "file/mes") {
+                const pseudoData = {
+                    type: data.type,
+                    destination: data.destination,
+                    message: encodeURIComponent(
+                        JSON.stringify({
+                            fileName: data.fileName,
+                            fileContent: data.fileContent,
+                        }),
+                    ),
+                };
+
+                node.direct(nodeIds.filter((n) => n.name === data.destination)[0].nodeId, {
+                    name: username,
+                    text: pseudoData.message,
+                });
+
+                saveMessage(pseudoData, username);
+            }
+
+            if (data.type === "text/mes") {
                 // console.log(nodeIds.filter((n) => n.name === data.destination)[0].nodeId);
                 if (data.message.charAt(0) !== "/") {
                     if (data.destination !== "=== HOME ===") {

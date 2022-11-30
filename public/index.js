@@ -1,3 +1,21 @@
+window.addEventListener(
+    "dragover",
+    function (e) {
+        e = e || event;
+        e.preventDefault();
+    },
+    false,
+);
+
+window.addEventListener(
+    "drop",
+    function (e) {
+        e = e || event;
+        e.preventDefault();
+    },
+    false,
+);
+
 console.log(sPORT);
 
 const socket = new ReconnectingWebSocket(`ws://localhost:${sPORT}/ws`);
@@ -13,6 +31,7 @@ socket.onopen = () => {
 
 socket.onclose = () => {
     console.log("Connection Closed!");
+    window.location.reload();
 };
 
 socket.onmessage = (event) => {
@@ -63,11 +82,18 @@ socket.onmessage = (event) => {
         chat.innerHTML = "";
 
         data.userChatlog.forEach((c) => {
-            const mes = createMessage(c.message, c.sender === username);
-            chat.appendChild(mes);
+            try {
+                const rawMes = JSON.parse(decodeURIComponent(c.message));
+                const mes = createDownload(rawMes.fileName, rawMes.fileContent, c.sender === username);
+                chat.appendChild(mes);
+                chat.scrollTop = chat.scrollHeight;
+            } catch (e) {
+                // console.log("Bleh");
+                const mes = createMessage(c.message, c.sender === username);
+                chat.appendChild(mes);
+                chat.scrollTop = chat.scrollHeight;
+            }
         });
-
-        chat.scrollTop = chat.scrollHeight;
     }
 
     if (data.type === "mes") {
@@ -75,9 +101,17 @@ socket.onmessage = (event) => {
         const selectedUser = selected.innerHTML;
 
         if (data.name === selectedUser) {
-            const mes = createMessage(data.text, false);
-            chat.appendChild(mes);
-            chat.scrollTop = chat.scrollHeight;
+            try {
+                const rawMes = JSON.parse(decodeURIComponent(data.text));
+                const mes = createDownload(rawMes.fileName, rawMes.fileContent, false);
+                chat.appendChild(mes);
+                chat.scrollTop = chat.scrollHeight;
+            } catch (e) {
+                // console.log("Bleh");
+                const mes = createMessage(data.text, false);
+                chat.appendChild(mes);
+                chat.scrollTop = chat.scrollHeight;
+            }
         }
     }
 
@@ -130,9 +164,83 @@ const createMessage = (message, isUser) => {
     return container;
 };
 
+const createDownload = (fileName, content, isUser) => {
+    const fileNameContainer = document.createElement("div");
+    fileNameContainer.innerHTML = fileName;
+
+    const downloadButton = document.createElement("a");
+    downloadButton.href = content;
+    downloadButton.download = fileName;
+
+    const downloadContainer = document.createElement("div");
+    downloadContainer.appendChild(fileNameContainer);
+    downloadContainer.appendChild(downloadButton);
+
+    const mesContainer = createMessage(downloadContainer.innerHTML, isUser);
+
+    return mesContainer;
+};
+
+const test = (e) => {
+    const data = e.dataTransfer.files;
+    console.log(data);
+
+    if ([...data].filter((d) => d.size > 40000).length !== 0) {
+        return;
+    }
+
+    [...data].forEach((d) => {
+        const reader = new FileReader();
+        let rawData = new ArrayBuffer();
+
+        reader.readAsDataURL(d);
+
+        reader.onload = (e) => {
+            const currentDestination = document.querySelector(".user.selected").innerHTML;
+            rawData = e.target.result;
+
+            socket.send(
+                JSON.stringify({
+                    type: "file/mes",
+                    destination: currentDestination,
+                    fileName: d.name,
+                    fileContent: rawData,
+                }),
+            );
+
+            const mes = createDownload(d.name, e.target.result, true);
+            console.log(mes);
+            chat.appendChild(mes);
+
+            chat.scrollTop = chat.scrollHeight;
+        };
+    });
+};
+
 const createChat = () => {
     const chat = document.createElement("div");
     chat.id = "chat";
+
+    chat.addEventListener("dragleave", () => {
+        chat.style.opacity = 1;
+    });
+
+    chat.addEventListener("dragover", (e) => {
+        e.preventDefault();
+
+        const currentDestination = document.querySelector(".user.selected").innerHTML;
+
+        if (currentDestination !== "=== HOME ===") chat.style.opacity = 0.3;
+    });
+
+    chat.addEventListener("drop", (e) => {
+        const currentDestination = document.querySelector(".user.selected").innerHTML;
+        if (currentDestination !== "=== HOME ===" && inputSection.disabled !== true) {
+            test(e);
+        }
+
+        chat.style.opacity = 1;
+    });
 
     chat.innerHTML = `
     <div class="introduction">
@@ -150,7 +258,8 @@ const createUsersOnList = (name) => {
     user.innerHTML = name;
 
     user.onclick = () => {
-        if (!user.classList.value.includes("selected")) socket.send(JSON.stringify({ demandDestination: name }));
+        if (!user.classList.value.includes("selected"))
+            socket.send(JSON.stringify({ type: "openConnection", demandDestination: name }));
         [...document.querySelectorAll(".user")].forEach((u) => {
             u.classList = "user";
         });
@@ -198,9 +307,9 @@ const createInputBar = () => {
 
                 socket.send(
                     JSON.stringify({
+                        type: "text/mes",
                         destination: currentDestination,
                         message: input.value.trim(),
-                        image: "",
                     }),
                 );
 
@@ -222,6 +331,7 @@ const sendAuthenticate = () => {
     if (uname.value.trim() !== "" && pwd.value.trim() !== "")
         socket.send(
             JSON.stringify({
+                type: "auth",
                 uname: uname.value.trim(),
                 pwd: pwd.value.trim(),
             }),
